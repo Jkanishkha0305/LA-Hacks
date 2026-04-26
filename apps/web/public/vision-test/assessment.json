@@ -1,0 +1,14 @@
+{
+  "estimatedStories": null,
+  "currentUse": "commercial",
+  "condition": "good",
+  "buildingType": "masonry",
+  "lotFeatures": [
+    "on-street parking",
+    "sidewalks",
+    "signage (food cart)"
+  ],
+  "constructionActivity": false,
+  "adjacentContext": "Dense urban streetscape with a mix of older, ornate masonry buildings and more distant modern glass skyscrapers. The street is a single-lane road with parallel parking, flanked by wide sidewalks.",
+  "developmentNotes": "The main building has a distinctive historic masonry facade, which often limits redevelopment to restoration or adaptive reuse rather than demolition, due to potential landmark status or preservation value. The lot itself appears fully built out."
+}

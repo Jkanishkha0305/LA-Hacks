@@ -1,0 +1,9 @@
+.turbo
+.next
+.vercel
+node_modules
+.git
+.env
+.env.local
+.env.*.local
+.superpowers

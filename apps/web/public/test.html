@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NYC Property Analysis: 120 Broadway, New York, NY</title>
+<style>
+  :root {
+    --bg-color: #f4f4f4;
+    --text-color: #111;
+    --accent-color: #d93025;
+    --border-color: #ccc;
+    --nav-bg: #fff;
+    --font-serif: "Georgia", serif;
+    --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+  }
+  
+  /* Sidebar Rail */
+  .rail {
+    width: 250px;
+    background: var(--nav-bg);
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    padding: 20px 0;
+    z-index: 10;
+  }
+  .rail-header {
+    padding: 0 20px 20px;
+    border-bottom: 2px solid var(--text-color);
+    margin-bottom: 20px;
+  }
+  .rail-header h1 {
+    font-family: var(--font-serif);
+    font-size: 1.2rem;
+    line-height: 1.3;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .rail-nav {
+    flex: 1;
+    overflow-y: auto;
+  }
+  .nav-item {
+    padding: 12px 20px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #555;
+    transition: all 0.2s;
+    border-left: 4px solid transparent;
+  }
+  .nav-item:hover { background: #f9f9f9; color: var(--text-color); }
+  .nav-item.active {
+    color: var(--text-color);
+    border-left-color: var(--accent-color);
+    background: #f0f0f0;
+  }
+  .rail-footer {
+    padding: 20px;
+    font-size: 0.7rem;
+    color: #888;
+    border-top: 1px solid var(--border-color);
+  }
+
+  /* Main Content Area */
+  .main-content {
+    flex: 1;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+  }
+  
+  /* Slides */
+  .slide-container {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+  .slide {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    padding: 60px 80px;
+    overflow-y: auto;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.4s ease, transform 0.4s ease;
+    transform: translateY(20px);
+  }
+  .slide.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+
+  /* Typography & Layout inside slides */
+  .slide-title {
+    font-family: var(--font-serif);
+    font-size: 3rem;
+    margin-bottom: 40px;
+    border-bottom: 4px solid var(--text-color);
+    padding-bottom: 10px;
+  }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; }
+  
+  .data-card {
+    border-top: 2px solid var(--accent-color);
+    padding-top: 15px;
+    margin-bottom: 30px;
+  }
+  .data-label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #666;
+    margin-bottom: 5px;
+  }
+  .data-value {
+    font-size: 2rem;
+    font-weight: 700;
+    font-family: var(--font-serif);
+  }
+  .data-sub {
+    font-size: 0.9rem;
+    color: #444;
+    margin-top: 5px;
+  }
+  
+  p { margin-bottom: 20px; line-height: 1.6; font-size: 1.1rem; }
+  
+  .disclosure-btn {
+    background: none; border: 1px solid var(--text-color);
+    padding: 10px 20px; font-size: 0.9rem; text-transform: uppercase;
+    cursor: pointer; font-weight: bold; margin-top: 20px;
+    transition: all 0.2s;
+  }
+  .disclosure-btn:hover { background: var(--text-color); color: #fff; }
+  .disclosure-content {
+    display: none;
+    margin-top: 20px; padding: 20px; background: var(--bg-color);
+    border-left: 3px solid var(--text-color);
+  }
+  .disclosure-content.open { display: block; }
+
+  /* Navigation Controls */
+  .controls {
+    display: flex;
+    justify-content: space-between;
+    padding: 20px 40px;
+    border-top: 1px solid var(--border-color);
+    background: #fff;
+  }
+  .btn {
+    padding: 12px 24px;
+    background: var(--text-color);
+    color: #fff;
+    border: none;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .btn:hover { background: var(--accent-color); }
+  .btn:disabled { background: #ccc; cursor: not-allowed; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    body { flex-direction: column; }
+    .rail { width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border-color); flex-direction: row; align-items: center; padding: 10px; overflow-x: auto; }
+    .rail-header { margin: 0; border: none; padding: 0 20px 0 0; }
+    .rail-nav { display: flex; flex-direction: row; white-space: nowrap; }
+    .nav-item { border-left: none; border-bottom: 3px solid transparent; padding: 10px; }
+    .nav-item.active { border-left: none; border-bottom-color: var(--accent-color); }
+    .rail-footer { display: none; }
+    .slide { padding: 30px 20px; }
+    .slide-title { font-size: 2rem; }
+    .grid-2, .grid-3 { grid-template-columns: 1fr; gap: 20px; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="rail">
+    <div class="rail-header">
+      <h1>Property<br>Analysis</h1>
+    </div>
+    <div class="rail-nav" id="railNav">
+      <div class="nav-item active" data-target="0">Executive Summary</div>
+      <div class="nav-item" data-target="1">Property Snapshot</div>
+      <div class="nav-item" data-target="2">Risk Profile</div>
+      <div class="nav-item" data-target="3">Market Context</div>
+      <div class="nav-item" data-target="4">Neighborhood</div>
+      <div class="nav-item" data-target="5">Evidence</div>
+      <div class="nav-item" data-target="6">Next Steps</div>
+    </div>
+    <div class="rail-footer">
+      Generated:<br>
+      <span id="timestamp">2026-03-21T12:00:00.000Z</span>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div class="slide-container" id="slides">
+      
+      <!-- Slide 0: Executive Summary -->
+      <div class="slide active">
+        <h2 class="slide-title">Executive Summary</h2>
+        <div class="data-card">
+          <div class="data-label">Subject Property</div>
+          <div class="data-value">120 Broadway</div>
+          <div class="data-sub">New York, NY &mdash; Manhattan, Financial District</div>
+        </div>
+        <p>This report provides an in-depth analysis of 120 Broadway, focusing on property fundamentals, current market positioning, and risk profile. The analysis leverages recent municipal data, market trends, and localized risk indicators.</p>
+        <p><strong>Analysis:</strong> Simple analysis for smoke test.</p>
+        <button class="disclosure-btn" onclick="toggleDisclosure('exec-details')">View Assessment Details</button>
+        <div class="disclosure-content" id="exec-details">
+          <p><strong>BBL:</strong> 1000477501</p>
+          <p><strong>Original Prompt:</strong> Test prompt</p>
+        </div>
+      </div>
+
+      <!-- Slide 1: Property Snapshot -->
+      <div class="slide">
+        <h2 class="slide-title">Property Snapshot</h2>
+        <div class="grid-3">
+          <div class="data-card">
+            <div class="data-label">Year Built</div>
+            <div class="data-value">1912</div>
+          </div>
+          <div class="data-card">
+            <div class="data-label">Building Class</div>
+            <div class="data-value">O4</div>
+          </div>
+          <div class="data-card">
+            <div class="data-label">Total Units</div>
+            <div class="data-value">1</div>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="data-card">
+            <div class="data-label">Lot Area</div>
+            <div class="data-value">12,000 sqft</div>
+          </div>
+          <div class="data-card">
+            <div class="data-label">Building Area</div>
+            <div class="data-value">80,000 sqft</div>
+          </div>
+          <div class="data-card">
+            <div class="data-label">Zoning</div>
+            <div class="data-value">C5-5</div>
+          </div>
+          <div class="data-card">
+            <div class="data-label">Floor Area Ratio (FAR)</div>
+            <div class="data-value">6.67</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Slide 2: Risk Profile -->
+      <div class="slide">
+        <h2 class="slide-title">Risk Profile</h2>
+        <p>Evaluating immediate liabilities based on municipal records and open violations.</p>
+        <div class="grid-3">
+          <div class="data-card">
+            <div class="data-label">Total Violations</div>
+            <div class="data-value">0</div>
+          </div>
+          <div class="data-card">
+            <div class="data-label">DOB Violations</div>
+            <div class="data-value">0</div>
+          </div>
+          <div class="data-card">
+            <div class="data-label">HPD Violations</div>
+            <div class="data-value">0</div>
+          </div>
+          <div class="data-card">
+            <div class="data-label">Complaints</div>
+            <div class="data-value">0</div>
+          </div>
+          <div class="data-card">
+            <div class="data-label">Open Permits</div>
+            <div class="data-value">1</div>
+          </div>
+        </div>
+        <p><em>Note: A minimal number of open permits is typical for ongoing maintenance. The absence of violations indicates a clean compliance profile.</em></p>
+      </div>
+
+      <!-- Slide 3: Market Context -->
+      <div class="slide">
+        <h2 class="slide-title">Market Context</h2>
+        <p>Current pricing dynamics and comparable trends in the vicinity.</p>
+        <div class="grid-2">
+          <div class="data-card">
+            <div class="data-label">Avg Price / Sqft</div>
+            <div class="data-value">$950</div>
+          </div>
+          <div class="data-card">
+            <div class="data-label">Comparable Sales</div>
+            <div class="data-value">3</div>
+          </div>
+          <div class="data-card">
+            <div class="data-label">1-Bedroom Rent</div>
+            <div class="data-value">$4,200</div>
+          </div>
+          <div class="data-card">
+            <div class="data-label">2-Bedroom Rent</div>
+            <div class="data-value">$5,600</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Slide 4: Neighborhood Context -->
+      <div class="slide">
+        <h2 class="slide-title">Neighborhood Context</h2>
+        <div class="data-card">
+          <div class="data-label">Area</div>
+          <div class="data-value">Financial District</div>
+          <div class="data-sub">Manhattan</div>
+        </div>
+        <div class="grid-2">
+          <div class="data-card">
+            <div class="data-label">Median Household Income</div>
+            <div class="data-value">$145,000</div>
+          </div>
+          <div></div>
+          <div class="data-card">
+            <div class="data-label">Total Incidents</div>
+            <div class="data-value">12</div>
+            <div class="data-sub">Recorded locally</div>
+          </div>
+          <div class="data-card">
+            <div class="data-label">Felony Incidents</div>
+            <div class="data-value">2</div>
+            <div class="data-sub">Subset of total incidents</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Slide 5: Evidence -->
+      <div class="slide">
+        <h2 class="slide-title">Evidence & Sources</h2>
+        <p>The integrity of this report relies on aggregated data sets from municipal and market sources. Click below to review raw tool outputs and metadata.</p>
+        <button class="disclosure-btn" onclick="toggleDisclosure('evidence-details')">Expand Evidence Data</button>
+        <div class="disclosure-content" id="evidence-details">
+          <p><strong>Tool Results:</strong> Data unavailable or empty in the supplied source.</p>
+          <p><strong>Report Timestamp:</strong> 2026-03-21T12:00:00.000Z</p>
+          <p>Data aggregates correspond to BBL 1000477501.</p>
+        </div>
+      </div>
+
+      <!-- Slide 6: Recommended Next Steps -->
+      <div class="slide">
+        <h2 class="slide-title">Recommended Next Steps</h2>
+        <p>Based on the current profile of 120 Broadway:</p>
+        <ul>
+          <li style="margin-left: 20px; margin-bottom: 10px;"><strong>Permit Review:</strong> Investigate the single open permit to ensure work is proceeding as planned or requires closeout.</li>
+          <li style="margin-left: 20px; margin-bottom: 10px;"><strong>Market Positioning:</strong> Evaluate competitive O4 building class assets in the Financial District to optimize lease/sale terms against the $950/sqft benchmark.</li>
+          <li style="margin-left: 20px; margin-bottom: 10px;"><strong>Compliance Monitoring:</strong> Maintain the excellent zero-violation status through routine inspections.</li>
+        </ul>
+      </div>
+
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+      <button class="btn" id="prevBtn" onclick="changeSlide(-1)" disabled>Previous</button>
+      <button class="btn" id="nextBtn" onclick="changeSlide(1)">Next</button>
+    </div>
+  </div>
+
+  <script>
+    let currentSlide = 0;
+    const slides = document.querySelectorAll('.slide');
+    const navItems = document.querySelectorAll('.nav-item');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const totalSlides = slides.length;
+
+    function updateView() {
+      slides.forEach((slide, index) => {
+        if (index === currentSlide) {
+          slide.classList.add('active');
+        } else {
+          slide.classList.remove('active');
+        }
+      });
+
+      navItems.forEach((item, index) => {
+        if (index === currentSlide) {
+          item.classList.add('active');
+          if (window.innerWidth <= 768) {
+             item.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+          } else {
+             item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        } else {
+          item.classList.remove('active');
+        }
+      });
+
+      prevBtn.disabled = currentSlide === 0;
+      nextBtn.disabled = currentSlide === totalSlides - 1;
+    }
+
+    function changeSlide(direction) {
+      currentSlide += direction;
+      if (currentSlide < 0) currentSlide = 0;
+      if (currentSlide >= totalSlides) currentSlide = totalSlides - 1;
+      updateView();
+    }
+
+    navItems.forEach((item, index) => {
+      item.addEventListener('click', () => {
+        currentSlide = index;
+        updateView();
+      });
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === 'Space') {
+        if (currentSlide < totalSlides - 1) changeSlide(1);
+      } else if (e.key === 'ArrowLeft') {
+        if (currentSlide > 0) changeSlide(-1);
+      }
+    });
+
+    function toggleDisclosure(id) {
+      const el = document.getElementById(id);
+      if (el.classList.contains('open')) {
+        el.classList.remove('open');
+      } else {
+        el.classList.add('open');
+      }
+    }
+  </script>
+</body>
+</html>
