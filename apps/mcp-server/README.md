@@ -201,30 +201,61 @@ pnpm http
 
 Devin / any HTTP MCP client connects to `http://your-host:8787/mcp` and follows the standard initialize-then-call flow.
 
-## Integration: Vercel AI SDK (programmatic)
+## Integration: Vercel AI SDK 6 (programmatic)
 
 ```ts
-import { experimental_createMCPClient as createMCPClient } from "ai"
-import { Experimental_StdioMCPTransport as StdioMCPTransport } from "ai/mcp-stdio"
-import { generateText } from "ai"
+import { Client } from "@modelcontextprotocol/sdk/client/index.js"
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
+import { generateText, dynamicTool, jsonSchema, stepCountIs } from "ai"
 import { google } from "@ai-sdk/google"
 
-const mcp = await createMCPClient({
-  transport: new StdioMCPTransport({
-    command: "npx",
-    args: ["-y", "tsx", "apps/mcp-server/src/index.ts"],
+// 1. Connect to the MCP server via stdio
+const client = new Client({ name: "my-agent", version: "0.1.0" })
+await client.connect(new StdioClientTransport({
+  command: "npx",
+  args: ["-y", "tsx", "apps/mcp-server/src/index.ts"],
+}))
+
+// 2. Convert MCP tools → AI SDK dynamicTools
+const { tools: mcpTools } = await client.listTools()
+const tools = Object.fromEntries(mcpTools.map((t) => [
+  t.name,
+  dynamicTool({
+    description: t.description ?? "",
+    inputSchema: jsonSchema(t.inputSchema),
+    execute: (input) => client.callTool({ name: t.name, arguments: input }),
   }),
-})
+]))
 
-const tools = await mcp.tools()
-
+// 3. Run the agent with MCP tools (provenance flows end-to-end)
 const { text } = await generateText({
   model: google("gemini-2.0-flash"),
   tools,
   prompt: "What is the parcel APN and zoning at 350 S Grand Ave, Los Angeles?",
+  stopWhen: stepCountIs(10),
 })
 
-await mcp.close()
+await client.close()
+```
+
+## Integration: SiteScope Web App
+
+The web app includes built-in MCP integration:
+
+- **`/api/chat/mcp`** — streaming chat with MCP-enhanced tools (provenance, caching, claim verification)
+- **`/api/agent/mcp`** — single-shot agent with full provenance chain in response
+- **`/api/mcp/status`** — health check endpoint (tool count, latency)
+- **MCP toggle** in the chat panel UI — switch between standard and MCP-enhanced mode
+
+```bash
+# Start the web app (MCP server is spawned on-demand per request)
+cd apps/web && pnpm dev
+# Test the MCP status endpoint
+curl http://localhost:3000/api/mcp/status
+# Test the MCP agent
+curl -X POST http://localhost:3000/api/agent/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"address": "350 S Grand Ave, Los Angeles"}'
 ```
 
 ## Why this is different

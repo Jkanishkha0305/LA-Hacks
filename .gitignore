@@ -39,3 +39,4 @@ npm-debug.log*
 .superpowers/
 .gstack/
 .windsurf/
+apps/web/.cache/
