@@ -6,6 +6,7 @@ import { Layers, Eye, ChevronLeft, ChevronRight } from "lucide-react"
 import { VisionPanel } from "@/components/vision-panel"
 import { LayerPanel } from "@/components/layer-panel"
 import { ApiKeyDialog } from "@/components/api-key-dialog"
+import { AuthButton } from "@/components/auth-button"
 import { useParcelState } from "@/lib/parcel-context"
 import { useVisionState, useVisionDispatch } from "@/lib/vision-context"
 import { fetchVisionData } from "@/lib/api/vision-client"
@@ -96,6 +97,11 @@ export function Sidebar() {
           </div>
         </>
       )}
+
+      {/* Auth — pinned to bottom */}
+      <div className="mt-auto border-t border-border px-3 py-2">
+        {collapsed ? null : <AuthButton />}
+      </div>
     </aside>
   )
 }

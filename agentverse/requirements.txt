@@ -1,0 +1,7 @@
+# Pinned to match the canonical Fetch.ai hackathon quickstarter
+# (https://github.com/fetchai/innovation-lab-examples/blob/main/fetch-hackathon-quickstarter/requirements.txt)
+# Do NOT bump these without testing — the Chat Protocol API drifts between minor versions.
+uagents==0.22.8
+uagents-core==0.3.8
+httpx>=0.27.0
+python-dotenv>=1.0.0

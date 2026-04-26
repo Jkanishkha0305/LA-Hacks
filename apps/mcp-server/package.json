@@ -1,0 +1,32 @@
+{
+  "name": "@workspace/mcp-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "SiteScope MCP — verified, replayable LA real-estate due-diligence tools for any AI coding agent.",
+  "bin": {
+    "sitescope-mcp": "./bin/sitescope-mcp.mjs"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "http": "tsx src/http.ts",
+    "eval": "tsx src/eval/run.ts",
+    "inspect": "npx -y @modelcontextprotocol/inspector tsx src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo 'no lint configured'",
+    "format": "prettier --write \"src/**/*.ts\""
+  },
+  "dependencies": {
+    "@ai-sdk/google": "^3.0.52",
+    "@modelcontextprotocol/sdk": "^1.20.0",
+    "ai": "^6.0.134",
+    "tsx": "^4.20.3",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.1.0",
+    "@workspace/typescript-config": "workspace:*",
+    "typescript": "^5.9.3"
+  }
+}

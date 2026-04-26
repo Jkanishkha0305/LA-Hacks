@@ -9,7 +9,7 @@ import {
 } from "ai"
 import { useState, useRef, useEffect, useMemo } from "react"
 import { Button } from "@workspace/ui/components/button"
-import { Send, Loader2, FileDown, ArrowRight } from "lucide-react"
+import { Send, Loader2, FileDown, ArrowRight, Shield, ShieldCheck } from "lucide-react"
 import { useReportGeneration } from "@/hooks/use-report-generation"
 import {
   useJsonRenderMessage,
@@ -31,8 +31,13 @@ import {
 import { downloadGeneratedReport } from "@/lib/api/report-client"
 import { geminiHeaders } from "@/lib/api/headers"
 
-const transport = new DefaultChatTransport({
+const standardTransport = new DefaultChatTransport({
   api: "/api/chat",
+  headers: () => geminiHeaders(),
+})
+
+const mcpTransport = new DefaultChatTransport({
+  api: "/api/chat/mcp",
   headers: () => geminiHeaders(),
 })
 
@@ -58,6 +63,18 @@ const TOOL_LABELS: Record<string, string> = {
   fetchRentData: "Fetching rent data",
   fetchCrimeData: "Checking crime data",
   fetchCensusData: "Fetching census data",
+  // MCP tool names
+  geocode_address: "Geocoding (MCP)",
+  fetch_parcel: "Fetching parcel (MCP)",
+  fetch_violations: "Checking violations (MCP)",
+  fetch_permits: "Checking permits (MCP)",
+  fetch_complaints: "Checking complaints (MCP)",
+  fetch_market_context: "Market context (MCP)",
+  fetch_fair_market_rent: "Fair market rent (MCP)",
+  fetch_crime: "Crime data (MCP)",
+  fetch_census_income: "Census income (MCP)",
+  fetch_toc_tier: "TOC tier (MCP)",
+  verify_claim: "Verifying claim (MCP)",
 }
 
 function AssistantMessage({ message }: { message: UIMessage }) {
@@ -128,8 +145,10 @@ export function ChatPanel({
 }: {
   onGeocode?: (result: { bbl: string; lat: number; lng: number; label: string; borough: string }) => void
 }) {
+  const [mcpMode, setMcpMode] = useState(false)
+  const activeTransport = mcpMode ? mcpTransport : standardTransport
   const { messages, sendMessage, status } = useChat({
-    transport,
+    transport: activeTransport,
   })
   const [input, setInput] = useState("")
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -222,8 +241,22 @@ export function ChatPanel({
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      {/* Quick action buttons — always visible */}
-      <div className="flex gap-1.5 border-b border-border px-2 py-2 flex-shrink-0">
+      {/* MCP mode toggle + Quick action buttons */}
+      <div className="flex items-center gap-1.5 border-b border-border px-2 py-1.5 flex-shrink-0">
+        <button
+          type="button"
+          onClick={() => setMcpMode((v) => !v)}
+          className={`flex items-center gap-1 rounded-md px-2 py-1.5 text-[9px] font-mono font-medium transition-all border ${
+            mcpMode
+              ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400"
+              : "border-border/50 bg-card/50 text-muted-foreground hover:border-primary/30"
+          }`}
+          title={mcpMode ? "MCP Enhanced: Provenance tracking, caching, claim verification" : "Standard mode: Direct tool calls"}
+        >
+          {mcpMode ? <ShieldCheck className="size-3" /> : <Shield className="size-3" />}
+          {mcpMode ? "MCP" : "STD"}
+        </button>
+        <div className="h-4 w-px bg-border/50" />
         {quickActions.map((qa) => (
           <button
             key={qa.label}
@@ -238,6 +271,11 @@ export function ChatPanel({
           </button>
         ))}
       </div>
+      {mcpMode && (
+        <div className="px-2 py-1 bg-emerald-500/5 border-b border-emerald-500/20">
+          <div className="text-[8px] font-mono text-emerald-400/80 tracking-wider uppercase">MCP Enhanced — Provenance tracking • Content hashing • Claim verification</div>
+        </div>
+      )}
 
       <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-3">
         {messages.length === 0 && (
