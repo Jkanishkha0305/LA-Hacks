@@ -336,22 +336,21 @@ async function fetchLAParcelNear(lat: number, lng: number, searchAddress?: strin
 
     // Pick the best parcel from the candidate set. LA County's identify endpoint
     // returns every parcel within the tolerance, which often includes:
-    //   - sub-parcels at the same address (e.g. office tower + adjacent garage)
-    //   - tax assessor "improvement" parcels with no SitusFullAddress
+    //   - sub-parcels at the same address (office tower + adjacent garage)
+    //   - tax-assessor "improvement" parcels with no SitusFullAddress
     //   - neighboring parcels for an entirely different street
-    // The previous logic picked the first street-number match, which for
-    // 633 W 5th St (Pacific Mutual area) chose the tiny adjacent parcel with
-    // SQFTmain1=0 instead of the actual office tower (SQFTmain1=1.3M).
     //
-    // New ordering:
-    //   1. Restrict to parcels whose SitusFullAddress contains the search street
-    //      number (when we have one).
-    //   2. Within that set, prefer parcels that actually report building area
-    //      (SQFTmain1 > 0) — that's the real improved parcel.
-    //   3. Tie-break by largest SQFTmain1, then largest lot area.
-    //   4. Fall back to the original first result if no street number filter
-    //      produces a candidate.
-    let result = results[0]!
+    // For 633 W 5th St (Pacific Mutual area) the naive first-match logic chose
+    // the tiny adjacent parcel with SQFTmain1=0 instead of the actual office
+    // tower (SQFTmain1=1.3M). New ordering:
+    //   1. Restrict to parcels whose SitusFullAddress contains the search
+    //      street number (when we have one).
+    //   2. If that filter empties the set, fall back to the full result list
+    //      so we still rank rather than landing on results[0] (often a
+    //      parking-lot record with no SitusFullAddress).
+    //   3. Within the candidate set, prefer parcels that actually report
+    //      building area (SQFTmain1 > 0) — that's the real improved parcel.
+    //   4. Tie-break by largest SQFTmain1, then largest lot area.
     const streetNum = searchAddress?.match(/^\d+/)?.[0] ?? ''
     const addressMatches = streetNum
       ? results.filter(r => {
@@ -359,18 +358,17 @@ async function fetchLAParcelNear(lat: number, lng: number, searchAddress?: strin
           return situs.includes(streetNum)
         })
       : results
+    const candidates = addressMatches.length > 0 ? addressMatches : results
 
-    if (addressMatches.length > 0) {
-      const ranked = [...addressMatches].sort((a, b) => {
-        const sqfA = toNumber(a.attributes?.SQFTmain1 ?? 0)
-        const sqfB = toNumber(b.attributes?.SQFTmain1 ?? 0)
-        if (sqfA !== sqfB) return sqfB - sqfA
-        const lotA = toNumber(a.attributes?.['Shape.STArea()'] ?? a.attributes?.Shape_Area ?? 0)
-        const lotB = toNumber(b.attributes?.['Shape.STArea()'] ?? b.attributes?.Shape_Area ?? 0)
-        return lotB - lotA
-      })
-      result = ranked[0]!
-    }
+    const ranked = [...candidates].sort((a, b) => {
+      const sqfA = toNumber(a.attributes?.SQFTmain1 ?? 0)
+      const sqfB = toNumber(b.attributes?.SQFTmain1 ?? 0)
+      if (sqfA !== sqfB) return sqfB - sqfA
+      const lotA = toNumber(a.attributes?.['Shape.STArea()'] ?? a.attributes?.Shape_Area ?? 0)
+      const lotB = toNumber(b.attributes?.['Shape.STArea()'] ?? b.attributes?.Shape_Area ?? 0)
+      return lotB - lotA
+    })
+    const result = ranked[0]!
 
     const a = result.attributes!
     return {
