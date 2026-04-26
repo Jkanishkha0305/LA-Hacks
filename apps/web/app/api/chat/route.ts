@@ -8,11 +8,10 @@ import {
   createContextAwareAnalyst,
   type ParcelContext,
 } from "@/lib/agents/property-analyst"
-import { createGroq } from "@ai-sdk/groq"
+import { getGoogleProvider } from "@/lib/google-provider"
+import { GeminiModel } from "@/lib/config/models"
 
 export const maxDuration = 60
-
-const groq = createGroq({ apiKey: process.env.GROQ_API_KEY })
 
 export async function POST(req: Request) {
   const { messages, parcelContext } = (await req.json()) as {
@@ -29,7 +28,8 @@ export async function POST(req: Request) {
   }
   console.log(`${"=".repeat(60)}`)
 
-  const model = groq('llama-3.3-70b-versatile')
+  const google = getGoogleProvider(req)
+  const model = google(GeminiModel.FLASH_LITE)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const agent: any = parcelContext
