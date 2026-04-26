@@ -39,4 +39,7 @@ npm-debug.log*
 .superpowers/
 .gstack/
 .windsurf/
+
+# Local dev scripts (smoke tests, etc.)
+apps/web/scripts/
 apps/web/.cache/

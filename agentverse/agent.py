@@ -91,13 +91,13 @@ async def _ask_site_scope(question: str) -> str:
             )
         except httpx.RequestError as e:
             return (
-                f"⚠️  Could not reach DueIntelligence backend at {SITE_SCOPE_URL}.\n\n"
+                f"⚠️  Could not reach SiteScope backend at {SITE_SCOPE_URL}.\n\n"
                 f"Make sure `pnpm dev` is running in `apps/web` and SITE_SCOPE_URL "
                 f"in `.env` is correct.\n\nError: {e}"
             )
 
     if r.status_code != 200:
-        return f"⚠️  DueIntelligence backend returned {r.status_code}: {r.text[:500]}"
+        return f"⚠️  SiteScope backend returned {r.status_code}: {r.text[:500]}"
 
     try:
         data = r.json()
