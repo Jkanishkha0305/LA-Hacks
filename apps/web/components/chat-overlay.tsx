@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { MessageSquare, X, Minus } from 'lucide-react'
 import { Button } from '@workspace/ui/components/button'
 import { ChatPanel } from '@/components/chat-panel'
@@ -13,6 +13,35 @@ export function ChatOverlay() {
   const [mode, setMode] = useState<Mode>('closed')
   const { parcels } = useParcelState()
   const dispatch = useParcelDispatch()
+  // Latest parcels snapshot for the geocode handler. Using a ref keeps the
+  // handler reference stable across renders so child effects don't re-fire.
+  const parcelsRef = useRef(parcels)
+  useEffect(() => { parcelsRef.current = parcels }, [parcels])
+
+  // Stable geocode handler. Skips refetch when the parcel is already loaded
+  // or in flight, so duplicate fires from chat streaming are no-ops.
+  const handleGeocode = useCallback(
+    ({ bbl, lat, lng, label, borough }: { bbl: string; lat: number; lng: number; label: string; borough: string }) => {
+      const existing = parcelsRef.current.find((p) => p.bbl === bbl)
+      if (existing && (existing.status === 'ready' || existing.status === 'loading')) {
+        return
+      }
+      if (!existing) {
+        dispatch({
+          type: 'PIN_PARCEL',
+          parcel: { bbl, address: label, borough, lat, lng, status: 'loading' },
+        })
+      }
+      dispatch({ type: 'UPDATE_PROGRESS', bbl, progress: 'Fetching LA parcel data...' })
+      fetchAgentData({ bbl, lat, lng, address: label })
+        .then((data) => dispatch({ type: 'PARCEL_READY', bbl, data }))
+        .catch((err) => {
+          const message = err instanceof Error ? err.message : 'Parcel analysis failed'
+          dispatch({ type: 'PARCEL_ERROR', bbl, error: message })
+        })
+    },
+    [dispatch],
+  )
 
   // Toggle with C key
   useEffect(() => {
@@ -81,30 +110,7 @@ export function ChatOverlay() {
             </Button>
           </div>
         </div>
-        <ChatPanel
-          onGeocode={({ bbl, lat, lng, label, borough }) => {
-            if (!parcels.some((p) => p.bbl === bbl)) {
-              dispatch({
-                type: 'PIN_PARCEL',
-                parcel: {
-                  bbl,
-                  address: label,
-                  borough,
-                  lat,
-                  lng,
-                  status: 'loading',
-                },
-              })
-            }
-            dispatch({ type: 'UPDATE_PROGRESS', bbl, progress: 'Fetching LA parcel data...' })
-            fetchAgentData({ bbl, lat, lng, address: label })
-              .then((data) => dispatch({ type: 'PARCEL_READY', bbl, data }))
-              .catch((err) => {
-                const message = err instanceof Error ? err.message : 'Parcel analysis failed'
-                dispatch({ type: 'PARCEL_ERROR', bbl, error: message })
-              })
-          }}
-        />
+        <ChatPanel onGeocode={handleGeocode} />
       </div>
     </>
   )

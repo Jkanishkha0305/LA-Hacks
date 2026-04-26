@@ -133,6 +133,7 @@ export function ChatPanel({
   })
   const [input, setInput] = useState("")
   const scrollRef = useRef<HTMLDivElement>(null)
+  const processedGeocodeIdsRef = useRef<Set<string>>(new Set())
   const analysisArtifact = buildAnalysisArtifact(messages)
   const rawDataReady = hasRawData(analysisArtifact)
   const report = useReportGeneration()
@@ -162,39 +163,45 @@ export function ChatPanel({
     })
   }, [messages])
 
-  // Extract geocode results for map marker
+  // Extract geocode results for map marker — fires ONCE per unique tool call.
+  // Without the dedupe ref, this effect re-runs on every streaming message
+  // update, hammering /api/parcel until the browser runs out of resources.
   useEffect(() => {
     if (!onGeocode) return
     for (const msg of messages) {
       if (msg.role !== "assistant") continue
       for (const part of msg.parts) {
         if (
-          isToolUIPart(part) &&
-          getToolName(part) === "geocodeAddress" &&
-          part.state === "output-available" &&
-          part.output &&
-          typeof part.output === "object" &&
-          "bbl" in part.output &&
-          "lat" in part.output &&
-          "lng" in part.output &&
-          "label" in part.output &&
-          !("error" in part.output)
-        ) {
-          const output = part.output as {
-            bbl: string
-            lat: number
-            lng: number
-            label: string
-            borough?: string
-          }
-          onGeocode({
-            bbl: output.bbl,
-            lat: output.lat,
-            lng: output.lng,
-            label: output.label,
-            borough: output.borough || "Los Angeles",
-          })
+          !(isToolUIPart(part) &&
+            getToolName(part) === "geocodeAddress" &&
+            part.state === "output-available" &&
+            part.output &&
+            typeof part.output === "object" &&
+            "bbl" in part.output &&
+            "lat" in part.output &&
+            "lng" in part.output &&
+            "label" in part.output &&
+            !("error" in part.output))
+        ) continue
+
+        const output = part.output as {
+          bbl: string
+          lat: number
+          lng: number
+          label: string
+          borough?: string
         }
+        const dedupeKey = `${msg.id}:${output.bbl}`
+        if (processedGeocodeIdsRef.current.has(dedupeKey)) continue
+        processedGeocodeIdsRef.current.add(dedupeKey)
+
+        onGeocode({
+          bbl: output.bbl,
+          lat: output.lat,
+          lng: output.lng,
+          label: output.label,
+          borough: output.borough || "Los Angeles",
+        })
       }
     }
   }, [messages, onGeocode])
